@@ -14,6 +14,5 @@ using Quantity   = int32_t;
 using LeavesQty  = int32_t;
 
 using Price = double;
-using Money = double;
 
 using Timestamp = uint64_t;
