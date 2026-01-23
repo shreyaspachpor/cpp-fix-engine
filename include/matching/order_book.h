@@ -4,20 +4,17 @@
 #include "common/types.h"
 #include "core/order.h"
 #include "core/execution.h"
+
 #include <map>
-#include <queue>
-#include <functional>
+#include <deque>
 #include <vector>
+#include <functional>
 
-class OrderBook{
+class OrderBook {
 public:
-
-    std::vector<Execution> process_order(Order);
+    std::vector<Execution> process_order(Order incoming);
 
 private:
-
-    std::map<Price,std::queue<Order>,std::greater<Price>> bids;
-    std::map<Price,std::queue<Order>> asks;
-
+    std::map<Price, std::deque<Order>, std::greater<Price>> bids;
+    std::map<Price, std::deque<Order>> asks;
 };
-

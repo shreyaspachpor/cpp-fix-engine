@@ -1,103 +1,86 @@
 #include "matching/order_book.h"
 #include <algorithm>
 
-std::vector<Execution> OrderBook::processOrder(Order order) {
-    if (order.side == Side::BUY) {
-        return matchBuy(order);
-    }
-    return matchSell(order);
-}
-
-
-std::vector<Execution> OrderBook::matchBuy(Order& buy) {
+std::vector<Execution> OrderBook::process_order(Order incoming)
+{
     std::vector<Execution> executions;
 
-    while (buy.quantity > 0 && !asks.empty()) {
-        auto bestAskIt = asks.begin();          // lowest sell price
-        Price askPrice = bestAskIt->first;
+    // ---------- BUY ORDER ----------
+    if (incoming.side == Side::Buy)
+    {
+        while (!asks.empty() && incoming.quantity > 0)
+        {
+            auto bestAskIt = asks.begin();
+            Price bestAskPrice = bestAskIt->first;
 
-        // No price overlap → stop matching
-        if (askPrice > buy.price) {
-            break;
-        }
+            if (bestAskPrice > incoming.price){
 
-        auto& askQueue = bestAskIt->second;
+                break;
+            }
 
-        while (buy.quantity > 0 && !askQueue.empty()) {
-            Order& sell = askQueue.front();
+            auto& queue = bestAskIt->second;
+            Order& resting = queue.front();
 
-            Quantity tradedQty = std::min(buy.quantity, sell.quantity);
+            Quantity traded =
+                std::min(incoming.quantity, resting.quantity);
 
-            executions.push_back({
-                buy.id,
-                tradedQty,
-                askPrice,
-                ExecType::PARTIAL_FILL
-            });
+            executions.emplace_back(
+                incoming.order_id,
+                traded,
+                bestAskPrice
+            );
 
-            buy.quantity  -= tradedQty;
-            sell.quantity -= tradedQty;
+            incoming.quantity -= traded;
+            resting.quantity -= traded;
 
-            if (sell.quantity == 0) {
-                askQueue.pop_front();   // FIFO preserved
+            if (resting.quantity == 0)
+            {
+                queue.pop_front();
+                if (queue.empty())
+                    asks.erase(bestAskIt);
             }
         }
 
-        if (askQueue.empty()) {
-            asks.erase(bestAskIt);      // remove empty price level
-        }
+        if (incoming.quantity > 0)
+            bids[incoming.price].push_back(incoming);
     }
 
-    // Leftover BUY becomes resting liquidity
-    if (buy.quantity > 0) {
-        bids[buy.price].push_back(buy);
-    }
+    // ---------- SELL ORDER ----------
+    else if (incoming.side == Side::Sell)
+    {
+        while (!bids.empty() && incoming.quantity > 0)
+        {
+            auto bestBidIt = bids.begin();
+            Price bestBidPrice = bestBidIt->first;
 
-    return executions;
-}
+            if (bestBidPrice < incoming.price)
+                break;
 
-std::vector<Execution> OrderBook::matchSell(Order& sell) {
-    std::vector<Execution> executions;
+            auto& queue = bestBidIt->second;
+            Order& resting = queue.front();
 
-    while (sell.quantity > 0 && !bids.empty()) {
-        auto bestBidIt = bids.begin();           // highest buy price
-        Price bidPrice = bestBidIt->first;
+            Quantity traded =
+                std::min(incoming.quantity, resting.quantity);
 
-        // No price overlap → stop matching
-        if (bidPrice < sell.price) {
-            break;
-        }
+            executions.emplace_back(
+                incoming.order_id,
+                traded,
+                bestBidPrice
+            );
 
-        auto& bidQueue = bestBidIt->second;
+            incoming.quantity -= traded;
+            resting.quantity -= traded;
 
-        while (sell.quantity > 0 && !bidQueue.empty()) {
-            Order& buy = bidQueue.front();
-
-            Quantity tradedQty = std::min(sell.quantity, buy.quantity);
-
-            executions.push_back({
-                sell.id,
-                tradedQty,
-                bidPrice,
-                ExecType::PARTIAL_FILL
-            });
-
-            sell.quantity -= tradedQty;
-            buy.quantity  -= tradedQty;
-
-            if (buy.quantity == 0) {
-                bidQueue.pop_front();
+            if (resting.quantity == 0)
+            {
+                queue.pop_front();
+                if (queue.empty())
+                    bids.erase(bestBidIt);
             }
         }
 
-        if (bidQueue.empty()) {
-            bids.erase(bestBidIt);
-        }
-    }
-
-    // Leftover SELL becomes resting liquidity
-    if (sell.quantity > 0) {
-        asks[sell.price].push_back(sell);
+        if (incoming.quantity > 0)
+            asks[incoming.price].push_back(incoming);
     }
 
     return executions;
