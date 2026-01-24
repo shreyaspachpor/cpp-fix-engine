@@ -10,6 +10,7 @@ using AccountId = uint64_t;
 using Symbol = std::string;
 
 
+
 using Quantity   = int32_t;
 using LeavesQty  = int32_t;
 

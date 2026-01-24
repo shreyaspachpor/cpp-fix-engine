@@ -9,9 +9,11 @@ enum class OrderType{
     Limit
 };
 
-
-enum class ExecType {
-    Partial_Fill,
-    Fill,
+enum class OrderStatus{
+    New,
+    Filled,
+    Partial_Filled,
+    Cancelled,
+    Rejected,
 };
 

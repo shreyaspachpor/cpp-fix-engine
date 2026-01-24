@@ -20,8 +20,8 @@ file(GLOB_RECURSE SOURCES
      src/market_data/*.cpp
 )
 
-# OMS executable
-add_executable(oms apps/oms_main.cpp ${SOURCES})
+# OMS executable (Commented out as apps/oms_main.cpp does not exist yet)
+# add_executable(oms apps/oms_main.cpp ${SOURCES})
 
 # Exchange executable
 add_executable(exchange apps/exchange_main.cpp ${SOURCES})
