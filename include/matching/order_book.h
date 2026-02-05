@@ -13,6 +13,7 @@
 class OrderBook {
 public:
     std::vector<Execution> process_order(Order incoming);
+    Quantity cancel_order(OrderId order_id, Price price, Side side);
 
 private:
     std::map<Price, std::deque<Order>, std::greater<Price>> bids;

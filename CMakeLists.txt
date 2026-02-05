@@ -5,10 +5,8 @@ project(cm_trading_system LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Include header files
 include_directories(include)
 
-# Collect all source files
 file(GLOB_RECURSE SOURCES
      src/common/*.cpp
      src/core/*.cpp
@@ -20,8 +18,4 @@ file(GLOB_RECURSE SOURCES
      src/market_data/*.cpp
 )
 
-# OMS executable (Commented out as apps/oms_main.cpp does not exist yet)
-# add_executable(oms apps/oms_main.cpp ${SOURCES})
-
-# Exchange executable
 add_executable(exchange apps/exchange_main.cpp ${SOURCES})

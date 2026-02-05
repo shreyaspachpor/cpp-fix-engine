@@ -13,22 +13,23 @@ std::vector<Execution> OrderBook::process_order(Order incoming)
             auto bestAskIt = asks.begin();
             Price bestAskPrice = bestAskIt->first;
 
-            if (bestAskPrice > incoming.price){
+            if (bestAskPrice > incoming.price)
+            {
 
                 break;
             }
 
-            auto& queue = bestAskIt->second;
-            Order& resting = queue.front();
+            auto &queue = bestAskIt->second;
+            Order &resting = queue.front();
 
             Quantity traded =
                 std::min(incoming.quantity, resting.quantity);
 
             executions.emplace_back(
                 incoming.order_id,
+                resting.order_id,
                 traded,
-                bestAskPrice
-            );
+                bestAskPrice);
 
             incoming.quantity -= traded;
             resting.quantity -= traded;
@@ -56,17 +57,17 @@ std::vector<Execution> OrderBook::process_order(Order incoming)
             if (bestBidPrice < incoming.price)
                 break;
 
-            auto& queue = bestBidIt->second;
-            Order& resting = queue.front();
+            auto &queue = bestBidIt->second;
+            Order &resting = queue.front();
 
             Quantity traded =
                 std::min(incoming.quantity, resting.quantity);
 
             executions.emplace_back(
                 incoming.order_id,
+                resting.order_id,
                 traded,
-                bestBidPrice
-            );
+                bestBidPrice);
 
             incoming.quantity -= traded;
             resting.quantity -= traded;
@@ -84,4 +85,56 @@ std::vector<Execution> OrderBook::process_order(Order incoming)
     }
 
     return executions;
+}
+
+Quantity OrderBook::cancel_order(OrderId order_id, Price price, Side side)
+{
+    if (side == Side::Buy)
+    {
+        auto level_it = bids.find(price);
+        if (level_it != bids.end())
+        {
+            auto &queue = level_it->second;
+
+            for (auto it = queue.begin(); it != queue.end(); ++it)
+            {
+                if (it->order_id == order_id)
+                {
+                    Quantity cancelled_qty = it->quantity;
+                    queue.erase(it);
+                    if (queue.empty())
+                    {
+                        bids.erase(level_it);
+                    }
+
+                    return cancelled_qty;
+                }
+            }
+        }
+    }
+    else if (side == Side::Sell)
+    {
+        auto level_it = asks.find(price);
+        if (level_it != asks.end())
+        {
+            auto &queue = level_it->second;
+
+            for (auto it = queue.begin(); it != queue.end(); ++it)
+            {
+                if (it->order_id == order_id)
+                {
+                    Quantity cancelled_qty = it->quantity;
+                    queue.erase(it);
+                    if (queue.empty())
+                    {
+                        asks.erase(level_it);
+                    }
+
+                    return cancelled_qty;
+                }
+            }
+        }
+    }
+
+    return 0;
 }
