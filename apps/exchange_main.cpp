@@ -36,52 +36,52 @@ void print_order_update(OrderId order_id, const OMS &oms)
 
 void print_separator()
 {
-    std::cout << "─────────────────────────────────────────────────────\n";
+    std::cout << "-----------------------------------------------------\n";
 }
 
 int main()
 {
     std::cout << "\n";
-    std::cout << "╔═════════════════════════════════════════════════════╗\n";
-    std::cout << "║    RELIANCE Stock Exchange - Complete Test Suite   ║\n";
-    std::cout << "╚═════════════════════════════════════════════════════╝\n\n";
+    std::cout << "===================================================\n";
+    std::cout << " RELIANCE Stock Exchange - Order Matching System  \n";
+    std::cout << "===================================================\n\n";
 
     OrderBook order_book;
     OMS oms(order_book);
 
-    // ============ TEST 1: Basic Liquidity Setup ============
+    // TEST 1: Basic Liquidity Setup
     std::cout << "[TEST 1] Setting Up Initial Liquidity\n";
     print_separator();
-
+    
     Order sell1{1, 2500.0, "RELIANCE", Side::Sell, OrderType::Limit, 100, 100};
     oms.submit_order(sell1);
-    std::cout << "  Added: SELL 100 RELIANCE @ ₹2500\n";
-
+    std::cout << "  Added: SELL 100 RELIANCE @ Rs.2500\n";
+    
     Order sell2{2, 2510.0, "RELIANCE", Side::Sell, OrderType::Limit, 50, 50};
     oms.submit_order(sell2);
-    std::cout << "  Added: SELL 50 RELIANCE @ ₹2510\n";
-
+    std::cout << "  Added: SELL 50 RELIANCE @ Rs.2510\n";
+    
     Order sell3{3, 2520.0, "RELIANCE", Side::Sell, OrderType::Limit, 75, 75};
     oms.submit_order(sell3);
-    std::cout << "  Added: SELL 75 RELIANCE @ ₹2520\n\n";
-
+    std::cout << "  Added: SELL 75 RELIANCE @ Rs.2520\n\n";
+    
     std::cout << "Order Book Ready: 225 shares available for sale\n\n";
 
-    // ============ TEST 2: Full Match ============
+    // TEST 2: Full Match
     std::cout << "[TEST 2] Full Order Match\n";
     print_separator();
     std::cout << "  Scenario: Buy 50 shares @ best ask price\n\n";
-
+    
     Order buy1{4, 2500.0, "RELIANCE", Side::Buy, OrderType::Limit, 50, 50};
     oms.submit_order(buy1);
-
+    
     std::cout << "  Incoming Order:\n";
     print_order_update(4, oms);
     std::cout << "  Matched Against:\n";
     print_order_update(1, oms);
-    std::cout << "\n Result: Full fill on both sides (50/50)\n\n";
+    std::cout << "\nResult: Full fill on both sides (50/50)\n\n";
 
-    // ============ TEST 3: Partial Fill ============
+    // TEST 3: Partial Fill
     std::cout << "[TEST 3] Partial Fill Scenario\n";
     print_separator();
     std::cout << "  Scenario: Buy 75 shares, but only 50 available at best price\n\n";
@@ -95,10 +95,10 @@ int main()
     print_order_update(1, oms);
     std::cout << "\nResult: Seller filled (50/50), Buyer resting (50/75 filled)\n\n";
 
-    // ============ TEST 4: Price Improvement ============
+    // TEST 4: Price Improvement
     std::cout << "[TEST 4] Price Improvement (Aggressive Buy)\n";
     print_separator();
-    std::cout << "  Scenario: Buy @ ₹2515, should match multiple levels\n\n";
+    std::cout << "  Scenario: Buy @ Rs.2515, should match multiple levels\n\n";
 
     Order buy3{6, 2515.0, "RELIANCE", Side::Buy, OrderType::Limit, 60, 60};
     oms.submit_order(buy3);
@@ -109,10 +109,10 @@ int main()
     print_order_update(2, oms);
     std::cout << "\nResult: Buyer gets filled across price levels (50+10)\n\n";
 
-    // ============ TEST 5: Passive Order (No Match) ============
+    // TEST 5: Passive Order (No Match)
     std::cout << "[TEST 5] Passive Order - No Immediate Match\n";
     print_separator();
-    std::cout << "  Scenario: Buy @ ₹2480 (below market)\n\n";
+    std::cout << "  Scenario: Buy @ Rs.2480 (below market)\n\n";
 
     Order buy4{7, 2480.0, "RELIANCE", Side::Buy, OrderType::Limit, 30, 30};
     oms.submit_order(buy4);
@@ -121,10 +121,10 @@ int main()
     print_order_update(7, oms);
     std::cout << "\nResult: Order rests in book waiting for match\n\n";
 
-    // ============ TEST 6: Incoming Sell Matches Resting Buy ============
+    // TEST 6: Incoming Sell Matches Resting Buy
     std::cout << "[TEST 6] Sell Order Matches Resting Buy\n";
     print_separator();
-    std::cout << "  Scenario: SELL @ ₹2480 matches our resting buy\n\n";
+    std::cout << "  Scenario: SELL @ Rs.2480 matches our resting buy\n\n";
 
     Order sell4{8, 2480.0, "RELIANCE", Side::Sell, OrderType::Limit, 20, 20};
     oms.submit_order(sell4);
@@ -135,7 +135,7 @@ int main()
     print_order_update(7, oms);
     std::cout << "\nResult: Sell filled (20/20), Buy partial (20/30)\n\n";
 
-    // ============ TEST 7: Order Cancellation ============
+    // TEST 7: Order Cancellation
     std::cout << "[TEST 7] Order Cancellation\n";
     print_separator();
     std::cout << "  Scenario: Cancel remaining quantity of Order #7\n\n";
@@ -147,12 +147,12 @@ int main()
 
     std::cout << "  After Cancel:\n";
     print_order_update(7, oms);
-    std::cout << "\n Result: Remaining 10 shares cancelled\n\n";
+    std::cout << "\nResult: Remaining 10 shares cancelled\n\n";
 
-    // ============ TEST 8: Large Buy Sweeps Multiple Levels ============
-    std::cout << " [TEST 8] Large Order Sweeps Order Book\n";
+    // TEST 8: Large Buy Sweeps Multiple Levels
+    std::cout << "[TEST 8] Large Order Sweeps Order Book\n";
     print_separator();
-    std::cout << "  Scenario: Buy 100 shares @ ₹2525 (sweeps all levels)\n\n";
+    std::cout << "  Scenario: Buy 100 shares @ Rs.2525 (sweeps all levels)\n\n";
 
     Order buy5{9, 2525.0, "RELIANCE", Side::Buy, OrderType::Limit, 100, 100};
     oms.submit_order(buy5);
@@ -162,12 +162,12 @@ int main()
     std::cout << "  Sells Matched:\n";
     print_order_update(2, oms);
     print_order_update(3, oms);
-    std::cout << "\n Result: Buyer filled at multiple price levels\n\n";
+    std::cout << "\nResult: Buyer filled at multiple price levels\n\n";
 
-    // ============ FINAL SUMMARY ============
-    std::cout << "╔═════════════════════════════════════════════════════╗\n";
-    std::cout << "║              Test Suite Summary                     ║\n";
-    std::cout << "╚═════════════════════════════════════════════════════╝\n";
+    // FINAL SUMMARY
+    std::cout << "===================================================\n";
+    std::cout << "              Test Suite Summary                   \n";
+    std::cout << "===================================================\n";
     std::cout << "  Full Match          - PASSED\n";
     std::cout << "  Partial Fill        - PASSED\n";
     std::cout << "  Price Improvement   - PASSED\n";
