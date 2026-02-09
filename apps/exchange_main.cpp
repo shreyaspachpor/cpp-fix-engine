@@ -52,29 +52,29 @@ int main()
     // TEST 1: Basic Liquidity Setup
     std::cout << "[TEST 1] Setting Up Initial Liquidity\n";
     print_separator();
-    
+
     Order sell1{1, 2500.0, "RELIANCE", Side::Sell, OrderType::Limit, 100, 100};
     oms.submit_order(sell1);
     std::cout << "  Added: SELL 100 RELIANCE @ Rs.2500\n";
-    
+
     Order sell2{2, 2510.0, "RELIANCE", Side::Sell, OrderType::Limit, 50, 50};
     oms.submit_order(sell2);
     std::cout << "  Added: SELL 50 RELIANCE @ Rs.2510\n";
-    
+
     Order sell3{3, 2520.0, "RELIANCE", Side::Sell, OrderType::Limit, 75, 75};
     oms.submit_order(sell3);
     std::cout << "  Added: SELL 75 RELIANCE @ Rs.2520\n\n";
-    
+
     std::cout << "Order Book Ready: 225 shares available for sale\n\n";
 
     // TEST 2: Full Match
     std::cout << "[TEST 2] Full Order Match\n";
     print_separator();
     std::cout << "  Scenario: Buy 50 shares @ best ask price\n\n";
-    
+
     Order buy1{4, 2500.0, "RELIANCE", Side::Buy, OrderType::Limit, 50, 50};
     oms.submit_order(buy1);
-    
+
     std::cout << "  Incoming Order:\n";
     print_order_update(4, oms);
     std::cout << "  Matched Against:\n";

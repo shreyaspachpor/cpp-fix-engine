@@ -89,52 +89,25 @@ std::vector<Execution> OrderBook::process_order(Order incoming)
 
 Quantity OrderBook::cancel_order(OrderId order_id, Price price, Side side)
 {
-    if (side == Side::Buy)
-    {
-        auto level_it = bids.find(price);
-        if (level_it != bids.end())
+    auto cancel_from_level = [&](auto& levels) -> Quantity {
+        auto level_it = levels.find(price);
+        if (level_it == levels.end())
+            return 0;
+        
+        auto& queue = level_it->second;
+        for (auto it = queue.begin(); it != queue.end(); ++it)
         {
-            auto &queue = level_it->second;
-
-            for (auto it = queue.begin(); it != queue.end(); ++it)
+            if (it->order_id == order_id)
             {
-                if (it->order_id == order_id)
-                {
-                    Quantity cancelled_qty = it->quantity;
-                    queue.erase(it);
-                    if (queue.empty())
-                    {
-                        bids.erase(level_it);
-                    }
-
-                    return cancelled_qty;
-                }
+                Quantity cancelled_qty = it->quantity;
+                queue.erase(it);
+                if (queue.empty())
+                    levels.erase(level_it);
+                return cancelled_qty;
             }
         }
-    }
-    else if (side == Side::Sell)
-    {
-        auto level_it = asks.find(price);
-        if (level_it != asks.end())
-        {
-            auto &queue = level_it->second;
+        return 0;
+    };
 
-            for (auto it = queue.begin(); it != queue.end(); ++it)
-            {
-                if (it->order_id == order_id)
-                {
-                    Quantity cancelled_qty = it->quantity;
-                    queue.erase(it);
-                    if (queue.empty())
-                    {
-                        asks.erase(level_it);
-                    }
-
-                    return cancelled_qty;
-                }
-            }
-        }
-    }
-
-    return 0;
+    return (side == Side::Buy) ? cancel_from_level(bids) : cancel_from_level(asks);
 }

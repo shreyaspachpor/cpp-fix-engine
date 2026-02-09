@@ -46,6 +46,14 @@ void OMS::submit_order(const Order &order)
 void OMS::cancel_order(OrderId order_id)
 {
     OrderState &order_state = order_states_.at(order_id);
+    
+    // Remove from order book if order is not terminal
+    if (!order_state.is_terminal())
+    {
+        order_book_.cancel_order(order_id, order_state.price, order_state.side);
+    }
+    
+    // Update order status
     order_state.order_status = OrderStatus::Cancelled;
 }
 
