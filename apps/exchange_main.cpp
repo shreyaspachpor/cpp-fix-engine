@@ -1,182 +1,94 @@
 #include <iostream>
 #include <iomanip>
+
 #include "core/oms.h"
 #include "matching/order_book.h"
-#include "common/types.h"
-#include "common/enums.h"
 
-void print_order_update(OrderId order_id, const OMS &oms)
+static void print_order(OrderId id, const OMS& oms)
 {
-    const auto &state = oms.get_order_state(order_id);
-    std::cout << "  Order " << std::setw(2) << order_id << " | ";
+    const auto& s = oms.get_order_state(id);
+    const char* status = "New";
+    if (s.order_status == OrderStatus::Filled)         status = "Filled";
+    else if (s.order_status == OrderStatus::Partial_Filled) status = "PartialFilled";
+    else if (s.order_status == OrderStatus::Cancelled)  status = "Cancelled";
 
-    switch (state.order_status)
-    {
-    case OrderStatus::New:
-        std::cout << "New            ";
-        break;
-    case OrderStatus::Partial_Filled:
-        std::cout << "Partial Filled ";
-        break;
-    case OrderStatus::Filled:
-        std::cout << "Filled         ";
-        break;
-    case OrderStatus::Cancelled:
-        std::cout << "Cancelled      ";
-        break;
-    case OrderStatus::Rejected:
-        std::cout << "Rejected       ";
-        break;
-    }
-
-    std::cout << " | Filled: " << std::setw(3) << state.filled_quantity
-              << "/" << std::setw(3) << state.original_quantity
-              << " | Remaining: " << std::setw(3) << state.remaining_quantity() << "\n";
+    std::cout << "  Order #" << id
+              << "  " << std::left << std::setw(14) << status
+              << "  filled=" << s.filled_quantity << "/" << s.original_quantity << "\n";
 }
 
-void print_separator()
+static void print_trades(const OMS& oms, size_t from)
 {
-    std::cout << "-----------------------------------------------------\n";
+    const auto& trades = oms.get_trades();
+    for (size_t i = from; i < trades.size(); ++i)
+    {
+        const auto& t = trades[i];
+        std::cout << "  Trade #" << t.trade_id
+                  << "  buy=" << t.buy_order_id
+                  << "  sell=" << t.sell_order_id
+                  << "  price=" << std::fixed << std::setprecision(2) << t.price
+                  << "  qty=" << t.quantity << "\n";
+    }
 }
 
 int main()
 {
-    std::cout << "\n";
-    std::cout << "===================================================\n";
-    std::cout << " RELIANCE Stock Exchange - Order Matching System  \n";
-    std::cout << "===================================================\n\n";
+    OrderBook book;
+    OMS oms(book);
+    size_t cursor = 0;
 
-    OrderBook order_book;
-    OMS oms(order_book);
+    // --- Setup: passive sell-side liquidity
+    std::cout << "=== Setup: passive sell orders ===\n";
+    oms.submit_order({1, 100.00, "RELIANCE", Side::Sell, OrderType::Limit, 100, 100});
+    oms.submit_order({2, 101.00, "RELIANCE", Side::Sell, OrderType::Limit,  50,  50});
+    oms.submit_order({3, 102.00, "RELIANCE", Side::Sell, OrderType::Limit,  75,  75});
+    print_order(1, oms); print_order(2, oms); print_order(3, oms);
 
-    // TEST 1: Basic Liquidity Setup
-    std::cout << "[TEST 1] Setting Up Initial Liquidity\n";
-    print_separator();
+    // --- Full match
+    std::cout << "\n=== Full match: BUY 50 @ 100.00 ===\n";
+    oms.submit_order({4, 100.00, "RELIANCE", Side::Buy, OrderType::Limit, 50, 50});
+    print_order(4, oms); print_order(1, oms);
+    print_trades(oms, cursor); cursor = oms.get_trades().size();
 
-    Order sell1{1, 2500.0, "RELIANCE", Side::Sell, OrderType::Limit, 100, 100};
-    oms.submit_order(sell1);
-    std::cout << "  Added: SELL 100 RELIANCE @ Rs.2500\n";
+    // --- Partial fill
+    std::cout << "\n=== Partial fill: BUY 75 @ 100.00 ===\n";
+    oms.submit_order({5, 100.00, "RELIANCE", Side::Buy, OrderType::Limit, 75, 75});
+    print_order(5, oms); print_order(1, oms);
+    print_trades(oms, cursor); cursor = oms.get_trades().size();
 
-    Order sell2{2, 2510.0, "RELIANCE", Side::Sell, OrderType::Limit, 50, 50};
-    oms.submit_order(sell2);
-    std::cout << "  Added: SELL 50 RELIANCE @ Rs.2510\n";
+    // --- Price improvement
+    std::cout << "\n=== Price improvement: BUY 60 @ 101.50 ===\n";
+    oms.submit_order({6, 101.50, "RELIANCE", Side::Buy, OrderType::Limit, 60, 60});
+    print_order(6, oms); print_order(2, oms);
+    print_trades(oms, cursor); cursor = oms.get_trades().size();
 
-    Order sell3{3, 2520.0, "RELIANCE", Side::Sell, OrderType::Limit, 75, 75};
-    oms.submit_order(sell3);
-    std::cout << "  Added: SELL 75 RELIANCE @ Rs.2520\n\n";
+    // --- Passive buy, no match
+    std::cout << "\n=== Passive: BUY 30 @ 98.00 (no match) ===\n";
+    oms.submit_order({7, 98.00, "RELIANCE", Side::Buy, OrderType::Limit, 30, 30});
+    print_order(7, oms);
+    print_trades(oms, cursor); cursor = oms.get_trades().size();
 
-    std::cout << "Order Book Ready: 225 shares available for sale\n\n";
+    // --- Sell aggressor hits resting buy
+    std::cout << "\n=== Sell aggressor: SELL 20 @ 98.00 ===\n";
+    oms.submit_order({8, 98.00, "RELIANCE", Side::Sell, OrderType::Limit, 20, 20});
+    print_order(8, oms); print_order(7, oms);
+    print_trades(oms, cursor); cursor = oms.get_trades().size();
 
-    // TEST 2: Full Match
-    std::cout << "[TEST 2] Full Order Match\n";
-    print_separator();
-    std::cout << "  Scenario: Buy 50 shares @ best ask price\n\n";
-
-    Order buy1{4, 2500.0, "RELIANCE", Side::Buy, OrderType::Limit, 50, 50};
-    oms.submit_order(buy1);
-
-    std::cout << "  Incoming Order:\n";
-    print_order_update(4, oms);
-    std::cout << "  Matched Against:\n";
-    print_order_update(1, oms);
-    std::cout << "\nResult: Full fill on both sides (50/50)\n\n";
-
-    // TEST 3: Partial Fill
-    std::cout << "[TEST 3] Partial Fill Scenario\n";
-    print_separator();
-    std::cout << "  Scenario: Buy 75 shares, but only 50 available at best price\n\n";
-
-    Order buy2{5, 2500.0, "RELIANCE", Side::Buy, OrderType::Limit, 75, 75};
-    oms.submit_order(buy2);
-
-    std::cout << "  Incoming Order:\n";
-    print_order_update(5, oms);
-    std::cout << "  Matched Against:\n";
-    print_order_update(1, oms);
-    std::cout << "\nResult: Seller filled (50/50), Buyer resting (50/75 filled)\n\n";
-
-    // TEST 4: Price Improvement
-    std::cout << "[TEST 4] Price Improvement (Aggressive Buy)\n";
-    print_separator();
-    std::cout << "  Scenario: Buy @ Rs.2515, should match multiple levels\n\n";
-
-    Order buy3{6, 2515.0, "RELIANCE", Side::Buy, OrderType::Limit, 60, 60};
-    oms.submit_order(buy3);
-
-    std::cout << "  Incoming Order:\n";
-    print_order_update(6, oms);
-    std::cout << "  Matched Against:\n";
-    print_order_update(2, oms);
-    std::cout << "\nResult: Buyer gets filled across price levels (50+10)\n\n";
-
-    // TEST 5: Passive Order (No Match)
-    std::cout << "[TEST 5] Passive Order - No Immediate Match\n";
-    print_separator();
-    std::cout << "  Scenario: Buy @ Rs.2480 (below market)\n\n";
-
-    Order buy4{7, 2480.0, "RELIANCE", Side::Buy, OrderType::Limit, 30, 30};
-    oms.submit_order(buy4);
-
-    std::cout << "  Incoming Order:\n";
-    print_order_update(7, oms);
-    std::cout << "\nResult: Order rests in book waiting for match\n\n";
-
-    // TEST 6: Incoming Sell Matches Resting Buy
-    std::cout << "[TEST 6] Sell Order Matches Resting Buy\n";
-    print_separator();
-    std::cout << "  Scenario: SELL @ Rs.2480 matches our resting buy\n\n";
-
-    Order sell4{8, 2480.0, "RELIANCE", Side::Sell, OrderType::Limit, 20, 20};
-    oms.submit_order(sell4);
-
-    std::cout << "  Incoming Sell Order:\n";
-    print_order_update(8, oms);
-    std::cout << "  Matched With Resting Buy:\n";
-    print_order_update(7, oms);
-    std::cout << "\nResult: Sell filled (20/20), Buy partial (20/30)\n\n";
-
-    // TEST 7: Order Cancellation
-    std::cout << "[TEST 7] Order Cancellation\n";
-    print_separator();
-    std::cout << "  Scenario: Cancel remaining quantity of Order #7\n\n";
-
-    std::cout << "  Before Cancel:\n";
-    print_order_update(7, oms);
-
+    // --- Cancel
+    std::cout << "\n=== Cancel order #7 ===\n";
+    std::cout << "  before: "; print_order(7, oms);
     oms.cancel_order(7);
+    std::cout << "  after:  "; print_order(7, oms);
 
-    std::cout << "  After Cancel:\n";
-    print_order_update(7, oms);
-    std::cout << "\nResult: Remaining 10 shares cancelled\n\n";
+    // --- Book sweep
+    std::cout << "\n=== Sweep: BUY 100 @ 105.00 ===\n";
+    oms.submit_order({9, 105.00, "RELIANCE", Side::Buy, OrderType::Limit, 100, 100});
+    print_order(9, oms); print_order(2, oms); print_order(3, oms);
+    print_trades(oms, cursor); cursor = oms.get_trades().size();
 
-    // TEST 8: Large Buy Sweeps Multiple Levels
-    std::cout << "[TEST 8] Large Order Sweeps Order Book\n";
-    print_separator();
-    std::cout << "  Scenario: Buy 100 shares @ Rs.2525 (sweeps all levels)\n\n";
-
-    Order buy5{9, 2525.0, "RELIANCE", Side::Buy, OrderType::Limit, 100, 100};
-    oms.submit_order(buy5);
-
-    std::cout << "  Incoming Order:\n";
-    print_order_update(9, oms);
-    std::cout << "  Sells Matched:\n";
-    print_order_update(2, oms);
-    print_order_update(3, oms);
-    std::cout << "\nResult: Buyer filled at multiple price levels\n\n";
-
-    // FINAL SUMMARY
-    std::cout << "===================================================\n";
-    std::cout << "              Test Suite Summary                   \n";
-    std::cout << "===================================================\n";
-    std::cout << "  Full Match          - PASSED\n";
-    std::cout << "  Partial Fill        - PASSED\n";
-    std::cout << "  Price Improvement   - PASSED\n";
-    std::cout << "  Passive Order       - PASSED\n";
-    std::cout << "  Resting Match       - PASSED\n";
-    std::cout << "  Cancellation        - PASSED\n";
-    std::cout << "  Book Sweep          - PASSED\n\n";
-
-    std::cout << "Trading Session Complete!\n\n";
+    // --- Full trade log
+    std::cout << "\n=== Full trade log (" << oms.get_trades().size() << " trades) ===\n";
+    print_trades(oms, 0);
 
     return 0;
 }

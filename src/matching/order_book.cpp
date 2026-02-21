@@ -3,7 +3,7 @@
 
 template <typename BookMap, typename PriceCheck>
 void OrderBook::match_orders(Order &incoming, BookMap &match_book,
-                             std::vector<Execution> &executions,
+                             std::vector<Trade> &trades,
                              PriceCheck price_check)
 {
     while (!match_book.empty() && incoming.quantity > 0)
@@ -18,12 +18,17 @@ void OrderBook::match_orders(Order &incoming, BookMap &match_book,
         Order &resting = queue.front();
 
         Quantity traded = std::min(incoming.quantity, resting.quantity);
+        TradeId trade_id = next_trade_id_++;
 
-        executions.emplace_back(
-            incoming.order_id,
-            resting.order_id,
-            traded,
-            best_price);
+        OrderId buy_id = (incoming.side == Side::Buy) ? incoming.order_id : resting.order_id;
+        OrderId sell_id = (incoming.side == Side::Buy) ? resting.order_id : incoming.order_id;
+
+        trades.emplace_back(
+            trade_id,
+            buy_id,
+            sell_id,
+            best_price,
+            traded);
 
         incoming.quantity -= traded;
         resting.quantity -= traded;
@@ -37,13 +42,13 @@ void OrderBook::match_orders(Order &incoming, BookMap &match_book,
     }
 }
 
-std::vector<Execution> OrderBook::process_order(Order incoming)
+std::vector<Trade> OrderBook::process_order(Order incoming)
 {
-    std::vector<Execution> executions;
+    std::vector<Trade> trades;
 
     if (incoming.side == Side::Buy)
     {
-        match_orders(incoming, asks, executions,
+        match_orders(incoming, asks, trades,
                      [](Price ask, Price bid)
                      { return ask <= bid; });
         if (incoming.quantity > 0)
@@ -51,14 +56,14 @@ std::vector<Execution> OrderBook::process_order(Order incoming)
     }
     else if (incoming.side == Side::Sell)
     {
-        match_orders(incoming, bids, executions,
+        match_orders(incoming, bids, trades,
                      [](Price bid, Price ask)
-                     { return bid >= ask; });
+                     { return bid >= ask; });   
         if (incoming.quantity > 0)
             asks[incoming.price].push_back(incoming);
     }
 
-    return executions;
+    return trades;
 }
 
 Quantity OrderBook::cancel_order(OrderId order_id, Price price, Side side)
@@ -86,3 +91,4 @@ Quantity OrderBook::cancel_order(OrderId order_id, Price price, Side side)
 
     return (side == Side::Buy) ? cancel_from_level(bids) : cancel_from_level(asks);
 }
+

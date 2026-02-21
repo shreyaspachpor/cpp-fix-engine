@@ -1,45 +1,50 @@
 
 #include "core/oms.h"
 #include "core/order_state.h"
+#include "core/trade.h"
 #include "matching/order_book.h"
 
 OMS::OMS(OrderBook &order_book) : order_book_(order_book) {}
 
-void OMS::apply_execution(const Execution &execution)
+void OMS::apply_trade(const Trade &trade)
 {
-    // Update incoming order
-    OrderState &order_state = order_states_.at(execution.order_id);
-    order_state.filled_quantity += execution.quantity;
-    if (order_state.remaining_quantity() == 0)
+    OrderState &buy_state = order_states_.at(trade.buy_order_id);
+    buy_state.filled_quantity += trade.quantity;
+    if (buy_state.remaining_quantity() == 0)
     {
-        order_state.order_status = OrderStatus::Filled;
+        buy_state.order_status = OrderStatus::Filled;
     }
     else
     {
-        order_state.order_status = OrderStatus::Partial_Filled;
+        buy_state.order_status = OrderStatus::Partial_Filled;
     }
 
-    // Update resting order
-    OrderState &resting_state = order_states_.at(execution.resting_order_id);
-    resting_state.filled_quantity += execution.quantity;
-    if (resting_state.remaining_quantity() == 0)
+    OrderState &sell_state = order_states_.at(trade.sell_order_id);
+    sell_state.filled_quantity += trade.quantity;
+    if (sell_state.remaining_quantity() == 0)
     {
-        resting_state.order_status = OrderStatus::Filled;
+        sell_state.order_status = OrderStatus::Filled;
     }
     else
     {
-        resting_state.order_status = OrderStatus::Partial_Filled;
+        sell_state.order_status = OrderStatus::Partial_Filled;
     }
+
+    trades_.push_back(trade);
+
+    Execution buy_exec{trade.trade_id, trade.buy_order_id, Side::Buy, trade.price, trade.quantity};
+    Execution sell_exec{trade.trade_id, trade.sell_order_id, Side::Sell, trade.price, trade.quantity};
 }
 
 void OMS::submit_order(const Order &order)
 {
     OrderState order_state(order.order_id, order.quantity, order.price, order.side);
     order_states_.insert({order.order_id, order_state});
-    std::vector<Execution> executions = order_book_.process_order(order);
-    for (const auto &execution : executions)
+    
+    std::vector<Trade> trades = order_book_.process_order(order);
+    for (const auto &trade : trades)
     {
-        apply_execution(execution);
+        apply_trade(trade);
     }
 }
 
@@ -47,17 +52,20 @@ void OMS::cancel_order(OrderId order_id)
 {
     OrderState &order_state = order_states_.at(order_id);
     
-    // Remove from order book if order is not terminal
     if (!order_state.is_terminal())
     {
         order_book_.cancel_order(order_id, order_state.price, order_state.side);
     }
     
-    // Update order status
     order_state.order_status = OrderStatus::Cancelled;
 }
 
 const OrderState &OMS::get_order_state(OrderId order_id) const
 {
     return order_states_.at(order_id);
+}
+
+const std::vector<Trade> &OMS::get_trades() const
+{
+    return trades_;
 }
