@@ -3,8 +3,11 @@
 #include "core/order_state.h"
 #include "core/trade.h"
 #include "matching/order_book.h"
+#include "risk/i_risk_engine.h"
+#include "risk/risk_context.h"
 
-OMS::OMS(OrderBook &order_book) : order_book_(order_book) {}
+OMS::OMS(OrderBook& order_book, IRiskEngine& risk_engine)
+    : order_book_(order_book), risk_engine_(risk_engine) {}
 
 void OMS::apply_trade(const Trade &trade)
 {
@@ -36,13 +39,23 @@ void OMS::apply_trade(const Trade &trade)
     Execution sell_exec{trade.trade_id, trade.sell_order_id, Side::Sell, trade.price, trade.quantity};
 }
 
-void OMS::submit_order(const Order &order)
+void OMS::submit_order(const Order& order, const RiskContext& risk_ctx)
 {
+    RiskResult result = risk_engine_.check_order(risk_ctx, order);
+
     OrderState order_state(order.order_id, order.quantity, order.price, order.side);
+
+    if (result.check_type == RiskCheckType::Rejected)
+    {
+        order_state.order_status = OrderStatus::Rejected;
+        order_states_.insert({order.order_id, order_state});
+        return;
+    }
+
     order_states_.insert({order.order_id, order_state});
-    
+
     std::vector<Trade> trades = order_book_.process_order(order);
-    for (const auto &trade : trades)
+    for (const auto& trade : trades)
     {
         apply_trade(trade);
     }

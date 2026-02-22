@@ -3,6 +3,12 @@ build/
 build-*/
 out/
 
+# Vendored third-party headers (download via script or CMake FetchContent)
+include/json.hpp
+
+# Per-account risk configs — contain sensitive financial data, never commit
+config/
+
 # Compiled Object files
 *.o
 *.obj

@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include_directories(include)
 
-file(GLOB_RECURSE SOURCES
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
      src/common/*.cpp
      src/core/*.cpp
      src/matching/*.cpp

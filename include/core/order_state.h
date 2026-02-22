@@ -30,7 +30,6 @@ struct OrderState
 
     bool is_terminal() const
     {
-        return order_status == OrderStatus::Filled ||
-               order_status == OrderStatus::Cancelled;
+        return order_status == OrderStatus::Filled || order_status == OrderStatus::Cancelled;
     }
 };

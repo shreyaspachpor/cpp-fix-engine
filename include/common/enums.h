@@ -17,3 +17,21 @@ enum class OrderStatus{
     Rejected,
 };
 
+enum class RiskCheckType{
+    Approved,
+    Rejected,
+    
+};
+
+enum class RejectionReason{
+    None,
+    Insufficient_Margin,
+    Circuit_Breaker,
+    Max_Notional_Per_Order,
+    Max_Notional_Per_Symbol,
+    Max_Notional_Per_Account,
+    Max_Qty_Per_Order,
+    Max_Qty_Per_Symbol,
+    Max_Qty_Per_Account,
+    Invalid_Order,
+};
