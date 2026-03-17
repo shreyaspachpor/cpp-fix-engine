@@ -6,14 +6,16 @@
 struct OrderState
 {
     OrderId     order_id;
+    Symbol      symbol;
     Quantity    original_quantity;
     Quantity    filled_quantity;
     Price       price;
     Side        side;
     OrderStatus order_status;
 
-    OrderState(OrderId id, Quantity qty, Price price, Side side)
+    OrderState(OrderId id,Symbol symbol, Quantity qty, Price price, Side side)
         : order_id(id),
+          symbol(std::move(symbol)),
           original_quantity(qty),
           filled_quantity(0),
           order_status(OrderStatus::New),

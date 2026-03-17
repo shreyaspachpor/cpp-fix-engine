@@ -34,4 +34,5 @@ enum class RejectionReason{
     Max_Qty_Per_Symbol,
     Max_Qty_Per_Account,
     Invalid_Order,
+    Invalid_Symbol,
 };
