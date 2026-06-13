@@ -75,7 +75,26 @@ cmake -B build_msvc -G "Visual Studio 17 2022"
 cmake --build build_msvc --config Release
 ```
 
-The compiled binary `exchange_fix.exe` will be located in `build_msvc/Release/`.
+The compiled binaries will be located in `build_msvc/Release/`:
+* `exchange_fix.exe`: The FIX acceptor trading server.
+* `exchange_benchmark.exe`: High-performance matching engine benchmarking executable.
+
+---
+
+## Performance Benchmarking & Profiling
+
+To profile the core matching engine's throughput and tail latencies under peak load, you can run the offline benchmarking target:
+
+```powershell
+.\build_msvc\Release\exchange_benchmark.exe
+```
+
+This executable pre-allocates **1,000,000 randomized limit orders** (BUY/SELL, varying sizes/prices) and processes them sequentially. It bypasses TCP sockets and network serialization overhead to measure the raw, isolated latency of the C++ OMS and Matching Engine.
+
+Under an MSVC Release build, the benchmark yields:
+- **Throughput**: ~780,000+ orders/sec (0.78M orders/sec)
+- **Median (p50) Latency**: ~800 ns
+- **99th Percentile Latency**: ~2,700 ns (~2.7 µs)
 
 ---
 

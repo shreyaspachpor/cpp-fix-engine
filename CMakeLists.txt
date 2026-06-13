@@ -20,6 +20,9 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
 # Standard Exchange Executable (No QuickFIX required)
 add_executable(exchange apps/exchange_main.cpp ${SOURCES})
 
+# Benchmark Executable (No QuickFIX required)
+add_executable(exchange_benchmark apps/benchmark.cpp ${SOURCES})
+
 # FIX Exchange Acceptor Executable (Requires QuickFIX)
 file(GLOB FIX_SOURCES src/fix/*.cpp)
 add_executable(exchange_fix apps/exchange_fix_main.cpp ${SOURCES} ${FIX_SOURCES})
@@ -27,4 +30,5 @@ add_executable(exchange_fix apps/exchange_fix_main.cpp ${SOURCES} ${FIX_SOURCES}
 target_include_directories(exchange_fix PRIVATE "C:/quickfix-master/include")
 target_link_directories(exchange_fix PRIVATE "C:/quickfix-master/lib")
 target_link_libraries(exchange_fix PRIVATE quickfix ws2_32 wsock32 odbc32)
+
 

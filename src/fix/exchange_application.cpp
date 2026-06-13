@@ -3,6 +3,7 @@
 #include <quickfix/Session.h>
 #include <iostream>
 #include <sstream>
+#include <chrono>
 
 // ── Constructor ───────────────────────────────────────────────────────────────
 
@@ -145,19 +146,25 @@ void ExchangeApplication::onMessage(const FIX42::NewOrderSingle& msg,
     std::vector<Trade> trades;
     OrderState state;
 
+    auto start_time = std::chrono::high_resolution_clock::now();
     {
         std::lock_guard<std::mutex> sym_lock(*symbol_mutex);
         trades = exchange_.submit_order(order, risk_ctx_);
         state = exchange_.get_order_state(order_id);
     }
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto latency_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(end_time - start_time).count();
 
     if (state.order_status == OrderStatus::Rejected)
     {
-        std::cout << "[FIX] Order " << cl_ord_id << " Rejected: Risk check failed\n";
+        std::cout << "[FIX] Order " << cl_ord_id << " Rejected: Risk check failed (Engine Latency: " << latency_ns << " ns)\n";
         send_exec_report(session_id, cl_ord_id, order_id, state,
                          ExecType::Rejected, "Risk check failed");
         return;
     }
+
+    std::cout << "[FIX] Order Accepted -> ID: " << cl_ord_id 
+              << " (Engine Latency: " << latency_ns << " ns)\n";
 
     // Send New ack first
     send_exec_report(session_id, cl_ord_id, order_id, state, ExecType::New);
@@ -263,9 +270,11 @@ void ExchangeApplication::onMessage(const FIX42::OrderCancelRequest& msg,
         return;
     }
 
+    auto start_time = std::chrono::high_resolution_clock::now();
     exchange_.cancel_order(order_id);
-
     OrderState state = exchange_.get_order_state(order_id);
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto latency_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(end_time - start_time).count();
     
     {
         std::lock_guard<std::mutex> lock(global_state_mutex_);
@@ -273,7 +282,7 @@ void ExchangeApplication::onMessage(const FIX42::OrderCancelRequest& msg,
         orderid_to_clordid_map_[order_id] = cl_ord_id;
     }
 
-    std::cout << "[FIX] Order " << orig_cl_ord_id << " Cancelled successfully\n";
+    std::cout << "[FIX] Order " << orig_cl_ord_id << " Cancelled successfully (Engine Latency: " << latency_ns << " ns)\n";
     send_exec_report(session_id, cl_ord_id, order_id, state, ExecType::Cancelled);
 }
 
@@ -326,6 +335,7 @@ void ExchangeApplication::onMessage(const FIX42::OrderCancelReplaceRequest& msg,
     std::vector<Trade> trades;
     OrderState state;
 
+    auto start_time = std::chrono::high_resolution_clock::now();
     {
         std::lock_guard<std::mutex> sym_lock(*symbol_mutex);
 
@@ -341,6 +351,8 @@ void ExchangeApplication::onMessage(const FIX42::OrderCancelReplaceRequest& msg,
         trades = exchange_.modify_order(order_id, new_price, new_qty, risk_ctx_);
         state = exchange_.get_order_state(order_id);
     }
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto latency_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(end_time - start_time).count();
 
     {
         std::lock_guard<std::mutex> lock(global_state_mutex_);
@@ -349,7 +361,7 @@ void ExchangeApplication::onMessage(const FIX42::OrderCancelReplaceRequest& msg,
         order_sessions_[order_id] = session_id;
     }
 
-    std::cout << "[FIX] Order " << orig_cl_ord_id << " Replaced successfully\n";
+    std::cout << "[FIX] Order " << orig_cl_ord_id << " Replaced successfully (Engine Latency: " << latency_ns << " ns)\n";
     send_exec_report(session_id, cl_ord_id, order_id, state, ExecType::Replace);
 
     // Send fill reports for any immediate matches after the replace

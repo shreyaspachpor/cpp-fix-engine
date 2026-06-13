@@ -84,3 +84,6 @@ Thumbs.db
 # IDE files
 .idea/
 *.iml
+
+# Performance benchmark reports (local only)
+performance_benchmark_report.md
