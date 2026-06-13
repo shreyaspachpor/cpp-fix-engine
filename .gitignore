@@ -1,5 +1,6 @@
 # Build directories
 build/
+build_msvc/
 build-*/
 out/
 
@@ -7,7 +8,13 @@ out/
 include/json.hpp
 
 # Per-account risk configs — contain sensitive financial data, never commit
-config/
+config/risk_*.json
+
+# QuickFIX local session files
+fix_store/
+fix_log/
+fix_store_*/
+fix_log_*/
 
 # Compiled Object files
 *.o

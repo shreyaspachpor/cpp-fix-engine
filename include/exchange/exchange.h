@@ -15,11 +15,13 @@ public:
     ~Exchange();
 
     void register_symbol(const Symbol& symbol);
-    void submit_order(const Order& order, const RiskContext& risk_ctx);
+    std::vector<Trade> submit_order(const Order& order, const RiskContext& risk_ctx);
     void cancel_order(OrderId order_id);
+    std::vector<Trade> modify_order(OrderId order_id, Price new_price, Quantity new_qty,
+                      const RiskContext& risk_ctx);
 
-    const OrderState& get_order_state(OrderId id) const;
-    const std::vector<Trade>& get_trades() const;
+    OrderState         get_order_state(OrderId id) const;
+    std::vector<Trade> get_trades()                const;
 
 private:
     // Declaration order matters: oms_ takes references to the first two.
